@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Administrador de videos - Mi sitio web</title>
+    <link href="https://fonts.googleapis.com/css?family=Nunito+Sans:400,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.17/dist/tailwind.min.css">
+    <script src="app.js"></script>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal bg-gradient-to-r from-pink-500 to-blue-500 min-h-screen">
+
+    <!-- Encabezado -->
+    <nav class="bg-white shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between py-4">
+                <div class="flex items-center">
+                    <span class="font-bold text-xl text-gray-800">Mi sitio web</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="mr-6">
+                        <input type="text" class="border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"  id="filename-input" placeholder="Buscar...">
+                    </div>
+                    <div>
+                        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onclick=BuscarDatos()>
+                            Buscar Videos
+                        </button>
+                        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onclick=GetVideo()>
+                            Video Random
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Cuerpo -->
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex flex-wrap -mx-2" id="videos-container">
+            <!-- Tarjeta de video -->
+           
+        </div>
+    </div>
+
+</body>
+</html>

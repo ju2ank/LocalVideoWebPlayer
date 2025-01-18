@@ -1,0 +1,42 @@
+/* Estilo para los controles de video */
+.video-controls {
+  display: block; /* Mostrar controles por defecto */
+  margin-top: 10px;
+  text-align: center;
+}
+
+/* Estilo mejorado para los botones de control */
+.video-controls button {
+  background-color: #FFD700; /* Amarillo */
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  margin: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  will-change: background-color;
+}
+
+.video-controls button:hover {
+  background-color: #E5B700; /* Color al pasar el mouse */
+}
+
+/* Estilo mejorado para el control de desplazamiento */
+.video-controls input[type=range] {
+  width: 80%;
+  margin: 5px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 5px;
+  background: #FFD700;
+  border-radius: 5px;
+  outline: none;
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+.video-controls input[type=range]:hover {
+  opacity: 1;
+}
+

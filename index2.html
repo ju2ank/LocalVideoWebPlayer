@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Videos</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
+
+    <script>
+
+        const url = 'https://localhost:446/'
+        const itemsPerPage = 10;
+        let lastPageLoaded = 0;
+        let datagrl = null;
+        let filtro = false;
+        let newdata = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+        fetch(`${url}VideoInfo/GetVideoList`)
+        .then(response => response.json())
+        .then(data =>{
+            // const dataArray = Object.entries(data);
+            // dataArray.sort(compareRandom);
+            // const dataSorted = Object.fromEntries(dataArray);
+
+            // datagrl = dataSorted;
+            datagrl=data;
+        }
+        
+        )
+        .catch(error => console.error(error));
+        });
+
+        function compareRandom(a, b) {
+        return Math.random() - 0.5;
+        }
+
+        function loadPage(pageNumber, data) {
+            // Calcula el índice del primer elemento a cargar en esta página
+            const startIndex = pageNumber * itemsPerPage;
+
+            // Calcula el índice del último elemento a cargar en esta página
+            const endIndex = Math.min(startIndex + itemsPerPage, data.length);
+
+            // Crea y añade los elementos a la página
+            for (let i = startIndex; i < endIndex; i++) {
+                const item = data[i];
+
+                const videoElement = document.createElement('video');
+                videoElement.autoplay = true;
+                videoElement.muted = true;
+                videoElement.src = `${url}VideoStream/GetStream/${item.path}`;
+                videoElement.className= "bg-gray-500 h-24 rounded-lg";
+                videoElement.id =  item.path.slice(item.path.lastIndexOf('|')+1,(item.path.length));
+                videoElement.addEventListener('click', function() { videoElement.requestFullscreen();});
+
+                
+                const labelElement = document.createElement('label');
+                labelElement.textContent = item.path.slice(item.path.lastIndexOf('|')+1,(item.path.length));
+                labelElement.setAttribute("for", "mi-input");
+                labelElement.className = "text-center block font-bold text-red-700";
+                labelElement.addEventListener('mouseup', function(event) {
+                    if (event.which === 2 || event.button === 1) {
+                        reproducirVideo(videoElement.src)}
+                    
+                    });
+                
+
+                const divElement = document.createElement('div');
+                divElement.appendChild(videoElement);
+                divElement.appendChild(labelElement);
+                
+                // Añade el elemento al contenedor de la página
+                const pageContainer = document.querySelector('#videos-container');
+                pageContainer.appendChild(divElement);
+                
+  }
+
+  // Actualiza el índice de la última página cargada
+  lastPageLoaded = pageNumber;
+}
+
+ function reproducirVideo(src)
+ {
+    window.open (`ReproducirVideo.html?src=${src}`);
+ }
+window.addEventListener('scroll', function() {
+  const pageContainer = document.querySelector('#videos-container');
+
+  // Verifica si el usuario ha llegado al final de la página actual
+  if (window.innerHeight + window.scrollY >= pageContainer.offsetHeight) {
+    // Si es así, carga la siguiente página
+    if (!filtro) {
+        loadPage(lastPageLoaded + 1,datagrl);    
+    }else{
+
+        loadPage(lastPageLoaded + 1,newdata);
+    }
+    
+  }
+});
+
+
+        function speed(value){
+
+            document.getElementById('videol').playbackRate = value;
+        }
+        function RestarSpeed(){
+
+            document.getElementById('points').value = 1.0;
+            speed(1)
+        }
+   
+        async function GetVideo(){
+   
+        document.getElementById("video").innerHTML ='';
+        await fetch(`${url}VideoInfo/GetRandomVideo`)
+                    .then(response => response.text())
+                    .then((response) => {
+                        showVideo(response)
+                    })
+                    .catch(err => console.log(err))
+  
+        }
+
+        async function obtenerDatos() {
+            try {
+                const response = await fetch(`${url}VideoInfo/GetVideoList`);
+                const data = await response.json();
+                datagrl = data
+                loadPage(0,datagrl)
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        function CrearPresentacion(data){
+
+            const container = document.getElementById('container');
+
+            data.forEach(item => {
+            const video = document.createElement('video');
+            video.src = `"${url}VideoStream/GetStream/${item.path}`;
+            video.autoplay = true;
+            container.appendChild(video);
+            });
+            }
+
+
+function showVideo(video){
+
+    /*Path*/
+    document.getElementById("videoPath").innerHTML = ``
+    document.getElementById("videoPath").innerHTML = video.slice(video.lastIndexOf('|')+1,(video.length))
+
+    /*Video*/
+    document.getElementById("video").innerHTML = ``
+    document.getElementById("video").innerHTML = 
+         `<video id="video" controls muted autoplay src="${url}VideoStream/GetStream/${video}"></video>`
+   
+       
+    }
+
+    function BuscarDatos(){
+    const filenameInput = document.getElementById('filename-input');
+    const filename = filenameInput.value.toLowerCase();
+    newdata = datagrl.filter(item => item.path.toLowerCase().includes(filename));
+    filtro=true;
+    loadPage(0,newdata);
+ 
+    }
+
+
+
+
+
+    </script>
+</head>
+<body class="bg-white font-sans leading-normal tracking-normal">
+    
+    <label for="filename-input">Ingrese el nombre del archivo:</label>
+    <input type="text" id="filename-input">
+    <button id="search-btn" onclick="BuscarDatos()">Buscar</button>
+
+    <h1 class="container w-full max-w-6xl mx-auto bg-brand font-bold text-purple-600  md:text-center text-2xl" id="videoPath"></h1>
+  
+    <div id="container">
+        <div class="videos-container" id="videos-container">
+
+        </div>
+
+    </div>
+
+    <div class="container w-full max-w-6xl mx-auto bg-white bg-cover mt-8 rounded border-gray-500 md:text-center text-2xl" id="video">
+    </div>
+    <div class="container w-full max-w-6xl mx-auto mt-8 rounded border-gray-500 md:text-center text-2xl bg-lime-200">
+    <button  class="px-4 py-1 text-sm text-purple-600 font-semibold rounded-full border border-purple-200 hover:text-white hover:bg-purple-600 hover:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 md:text-center" onclick="GetVideo()">CargarVideo</button>
+    <button  class="px-4 py-1 text-sm text-purple-600 font-semibold rounded-full border border-purple-200 hover:text-white hover:bg-purple-600 hover:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 md:text-center" onclick="RestarSpeed()">RestartSpeed</button>
+    <input type="range" id="points" value="1" name="points" min="0" max="10" onchange="speed(this.value)" >
+    </div>
+</body>
+</html>
+

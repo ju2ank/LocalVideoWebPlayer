@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
+
+    <script>
+
+        const url = 'https://localhost:447/'
+
+        function speed(value){
+
+            document.getElementById('videol').playbackRate = value;
+        }
+        function RestarSpeed(){
+
+            document.getElementById('points').value = 1.0;
+            speed(1)
+        }
+   
+        async function GetVideo(){
+   
+        document.getElementById("video").innerHTML ='';
+        await fetch(`${url}VideoInfo/GetRandomVideo`)
+                    .then(response => response.text())
+                    .then((response) => {
+                        showVideo(response)
+                        // CrearTMB()
+                    })
+                    .catch(err => console.log(err))
+  
+        }
+
+
+function showVideo(video){
+
+    /*Path*/
+    document.getElementById("videoPath").innerHTML = ``
+    document.getElementById("videoPath").innerHTML = video.slice(video.lastIndexOf('|')+1,(video.length))
+
+    /*Video*/
+    document.getElementById("video").innerHTML = ``
+    document.getElementById("video").innerHTML = 
+         `<video id="video" controls muted autoplay src="${url}VideoStream/GetStream/${video}"></video>`
+        // `<video id="videol" controls muted src="${url}VideoStream/GetStream/${video}"></video>`
+    
+    
+       
+    }
+
+    // function CrearTMB(){
+    //     const videotm = document.getElementById('video');
+    //      const canvas = document.getElementById('canvas');
+    //      const context = canvas.getContext('2d');
+
+    //     videotm.addEventListener('loadedmetadata', () => {
+    //     // // Configura el canvas para que tenga el mismo tamaño que el video
+    //      canvas.width = videotm.videoWidth;
+    //      canvas.height = videotm.videoHeight;
+    //      });
+
+    //     videotm.addEventListener('play', () => {
+    //      const captureInterval = setInterval(() => {
+    //     //     // Dibuja el cuadro actual del video en el canvas
+    //          context.drawImage(videotm, 0, 0, canvas.width, canvas.height);
+
+    //     //     // Usa la imagen resultante como miniatura del video
+    //          const thumbnail = canvas.toDataURL();
+    //          console.log('Miniatura generada:', thumbnail);
+    //      }, 1000 / 30); // Captura un cuadro cada 30fps
+    //      })
+
+
+    // }
+
+
+
+
+    </script>
+</head>
+<body class="bg-white font-sans leading-normal tracking-normal">
+    <h1 class="container w-full max-w-6xl mx-auto bg-brand font-bold text-purple-600  md:text-center text-2xl" id="videoPath"></h1>
+    <div class="container w-full max-w-6xl mx-auto bg-white bg-cover mt-8 rounded border-gray-500 md:text-center text-2xl" style="" id="video">
+    </div>
+    <canvas id="canvas"></canvas>
+
+    <div class="container w-full max-w-6xl mx-auto mt-8 rounded border-gray-500 md:text-center text-2xl bg-lime-200">
+    <button  class="px-4 py-1 text-sm text-purple-600 font-semibold rounded-full border border-purple-200 hover:text-white hover:bg-purple-600 hover:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 md:text-center" onclick="GetVideo()">CargarVideo</button>
+    <button  class="px-4 py-1 text-sm text-purple-600 font-semibold rounded-full border border-purple-200 hover:text-white hover:bg-purple-600 hover:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 md:text-center" onclick="RestarSpeed()">RestartSpeed</button>
+    <input type="range" id="points" value="1" name="points" min="0" max="10" onchange="speed(this.value)" >
+    </div>
+</body>
+</html>
+
