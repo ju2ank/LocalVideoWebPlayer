@@ -1,18 +1,30 @@
 const url = 'https://192.168.1.7:446/';
 const itemsPerPage = 30; // Cambiado a 30 elementos por página
 let currentPage = 0;
-let datagrl = null;
+let datagrl = JSON.parse(sessionStorage.getItem('datagrl')) || null; // Cargar datos de sessionStorage si están disponibles
 let filtro = false;
 let newdata = null;
+let randomVideoData = null; // Variable para almacenar el video aleatorio
 
 // Inicializa el evento DOMContentLoaded para cargar los datos
-document.addEventListener('DOMContentLoaded', cargarData);
+document.addEventListener('DOMContentLoaded', () => {
+    if (!datagrl) {
+        cargarData(); // Hacer fetch si no hay datos en sessionStorage
+    } else {
+        loadPage(0, datagrl); // Si hay datos en sessionStorage, cargarlos directamente
+    }
+    document.getElementById('reloadButton').addEventListener('click', () => {
+        sessionStorage.removeItem('datagrl'); // Limpiar sessionStorage para forzar un nuevo fetch
+        cargarData(); // Llamar a la función para hacer el fetch y recargar los datos
+    });
+});
 
 // Función para cargar datos desde la API
 async function cargarData() {
     try {
         const response = await fetch(`${url}VideoInfo/GetVideoList`);
         datagrl = await response.json();
+        sessionStorage.setItem('datagrl', JSON.stringify(datagrl)); // Guardar datos en sessionStorage
         loadPage(0, datagrl);
     } catch (error) {
         console.error('Error al cargar datos:', error);
@@ -40,6 +52,7 @@ function loadPage(pageNumber, data) {
     // Actualizar la información de paginación
     updatePaginationInfo(pageNumber, data.length);
 }
+// Funciones para manejo de botones de navegación, búsqueda de datos, etc.
 
 // Función para crear una tarjeta de video
 function createVideoCard(item, videoPath) {
@@ -61,12 +74,13 @@ function createVideoCard(item, videoPath) {
     const div5Element = document.createElement('div');
     div5Element.className = 'video-title bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded transition duration-300';
 
+    const encodedVideoPath = encodeURIComponent(item.path.slice(item.path.lastIndexOf('|') + 1).replace('.mp4', '')); // Cambiado para codificar el videoPath
     const videoElement = document.createElement('video');
     videoElement.autoplay = false;
     videoElement.muted = true;
-    videoElement.src = `${url}VideoStream/GetStream/${item.path}`;
+    videoElement.src = `${url}VideoStream/GetStream/${encodeURIComponent(item.path)}`; // Cambiado para codificar la ruta completa
     videoElement.className = 'w-full h-auto';
-    videoElement.id = videoPath;
+    videoElement.id = encodedVideoPath;
 
     // Añadir evento para maximizar el video al hacer clic
     videoElement.addEventListener('click', () => videoElement.requestFullscreen());
@@ -75,15 +89,12 @@ function createVideoCard(item, videoPath) {
     videoControls.className = 'video-controls';
     videoControls.style.display = 'block'; // Mostrar controles por defecto
     videoControls.innerHTML = `
-        <button onclick="togglePlayPause('${videoPath}')">Play/Pause</button>
-        <input type="range" min="0" max="100" value="0" onchange="seekVideo(event, '${videoPath}')">
+        <button onclick="togglePlayPause('${encodedVideoPath}')">Play/Pause</button>
+        <input type="range" min="0" max="100" value="0" onchange="seekVideo(event, '${encodedVideoPath}')">
     `;
 
     // Mostrar u ocultar controles al hacer clic en el nombre (si deseas mantener esta funcionalidad)
-    div5Element.innerHTML = videoPath;
-  /*   div5Element.addEventListener('click', () => {
-        toggleVideoControls(videoControls, videoElement);
-    }); */
+    div5Element.innerHTML = decodeURIComponent(encodedVideoPath); // Decodificar para mostrar el nombre legible
 
     div4Element.appendChild(videoElement);
     div4Element.appendChild(div5Element);
@@ -96,15 +107,7 @@ function createVideoCard(item, videoPath) {
     return div1Element;
 }
 
-// Función para mostrar u ocultar los controles de video
-/* function toggleVideoControls(videoControls, videoElement) {
-    if (videoControls.style.display === 'none' || !videoControls.style.display) {
-        videoControls.style.display = 'block';
-    } else {
-        videoControls.style.display = 'none';
-        videoElement.pause();
-    }
-} */
+
 
 // Función para reproducir o pausar el video
 function togglePlayPause(videoId) {
@@ -134,34 +137,44 @@ function buscarDatos() {
 
     const filename = document.getElementById('filename-input').value.toLowerCase();
     newdata = datagrl.filter(item => item.path.toLowerCase().includes(filename));
+    
+    // Ordenar los datos por nombre de video
+    newdata.sort((a, b) => {
+        const nameA = a.path.slice(a.path.lastIndexOf('|') + 1).toLowerCase();
+        const nameB = b.path.slice(b.path.lastIndexOf('|') + 1).toLowerCase();
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0;
+    });
+
     filtro = true;
     loadPage(0, newdata);
 }
+
 
 // Función para obtener un video aleatorio de la API
 async function getVideo() {
     try {
         const response = await fetch(`${url}VideoInfo/GetRandomVideo`);
-        const video = await response.text();
-        showVideo(video);
+        randomVideoData = await response.text(); // Guardar el video aleatorio en una variable separada
+        showVideo(randomVideoData);
     } catch (error) {
         console.error('Error al obtener video:', error);
     }
-    datagrl = null;
 }
+
 
 // Función para mostrar el video aleatorio obtenido
 function showVideo(video) {
     const pageContainer = document.querySelector('#videos-container');
     pageContainer.innerHTML = '';
 
-    let videoPath = video.slice(video.lastIndexOf('|') + 1);
-    videoPath = videoPath.replace('.mp4', ''); // Quitar la extensión .mp4
+    let videoPath = encodeURIComponent(video.slice(video.lastIndexOf('|') + 1).replace('.mp4', '')); // Codificar el videoPath
 
     const h1Element = document.createElement('h1');
     h1Element.className = 'container w-full max-w-6xl mx-auto bg-brand font-bold text-yellow-600 md:text-center text-2xl';
     h1Element.id = 'videoPath';
-    h1Element.innerHTML = videoPath;
+    h1Element.innerHTML = decodeURIComponent(videoPath); // Decodificar para mostrar el nombre legible
 
     const videoElement = document.createElement('video');
     videoElement.className = 'container w-full max-w-6xl mx-auto bg-white bg-cover mt-8 rounded border-gray-500 md:text-center text-2xl';
@@ -169,7 +182,7 @@ function showVideo(video) {
     videoElement.controls = true;
     videoElement.muted = true;
     videoElement.autoplay = true;
-    videoElement.src = `${url}VideoStream/GetStream/${video}`;
+    videoElement.src = `${url}VideoStream/GetStream/${encodeURIComponent(video)}`; // Codificar la ruta completa
 
     pageContainer.appendChild(h1Element);
     pageContainer.appendChild(videoElement);
