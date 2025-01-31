@@ -1,5 +1,6 @@
-const url = 'https://192.168.1.7:446/';
-const itemsPerPage = 30; // Cambiado a 30 elementos por página
+const url = 'http://192.168.1.7:450/';
+/* const url2 = 'http://localhost:8081/'; */
+const itemsPerPage = 15; // Cambiado a 30 elementos por página
 let currentPage = 0;
 let datagrl = JSON.parse(sessionStorage.getItem('datagrl')) || null; // Cargar datos de sessionStorage si están disponibles
 let filtro = false;
@@ -22,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Función para cargar datos desde la API
 async function cargarData() {
     try {
-        const response = await fetch(`${url}VideoInfo/GetVideoList`);
+        const response = await fetch(`${url}api/Video/list`);
         datagrl = await response.json();
         sessionStorage.setItem('datagrl', JSON.stringify(datagrl)); // Guardar datos en sessionStorage
         loadPage(0, datagrl);
@@ -74,11 +75,14 @@ function createVideoCard(item, videoPath) {
     const div5Element = document.createElement('div');
     div5Element.className = 'video-title bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded transition duration-300';
 
-    const encodedVideoPath = encodeURIComponent(item.path.slice(item.path.lastIndexOf('|') + 1).replace('.mp4', '')); // Cambiado para codificar el videoPath
+    /* const encodedVideoPath = encodeURIComponent(item.path.slice(item.path.lastIndexOf('|') + 1).replace('.mp4', '')); // Cambiado para codificar el videoPath
+     */
+    const encodedVideoPath = encodeURIComponent(item.name).replace('.mp4', ''); // Cambiado para codificar el videoPath
+    
     const videoElement = document.createElement('video');
     videoElement.autoplay = false;
     videoElement.muted = true;
-    videoElement.src = `${url}VideoStream/GetStream/${encodeURIComponent(item.path)}`; // Cambiado para codificar la ruta completa
+    videoElement.src = `${url}api/Video/stream/${encodeURIComponent(item.path)}`; // Cambiado para codificar la ruta completa
     videoElement.className = 'w-full h-auto';
     videoElement.id = encodedVideoPath;
 
@@ -155,8 +159,10 @@ function buscarDatos() {
 // Función para obtener un video aleatorio de la API
 async function getVideo() {
     try {
-        const response = await fetch(`${url}VideoInfo/GetRandomVideo`);
-        randomVideoData = await response.text(); // Guardar el video aleatorio en una variable separada
+        /* const response = await fetch(`${url}VideoInfo/GetRandomVideo`);
+        randomVideoData = await response.text(); // Guardar el video aleatorio en una variable separada */
+        const randomIndex = Math.floor(Math.random() * datagrl.length);
+        const randomVideoData = [datagrl[randomIndex]];
         showVideo(randomVideoData);
     } catch (error) {
         console.error('Error al obtener video:', error);
@@ -168,13 +174,14 @@ async function getVideo() {
 function showVideo(video) {
     const pageContainer = document.querySelector('#videos-container');
     pageContainer.innerHTML = '';
-
-    let videoPath = encodeURIComponent(video.slice(video.lastIndexOf('|') + 1).replace('.mp4', '')); // Codificar el videoPath
-
+    /* console.log(video); */
+    /* let videoPath = encodeURIComponent(video[0].path).replace('.mp4', ''); // Codificar el videoPath */
+    /*  console.log(videoPath);*/
+    
     const h1Element = document.createElement('h1');
     h1Element.className = 'container w-full max-w-6xl mx-auto bg-brand font-bold text-yellow-600 md:text-center text-2xl';
     h1Element.id = 'videoPath';
-    h1Element.innerHTML = decodeURIComponent(videoPath); // Decodificar para mostrar el nombre legible
+    h1Element.innerHTML = decodeURIComponent(video[0].name); // Decodificar para mostrar el nombre legible
 
     const videoElement = document.createElement('video');
     videoElement.className = 'container w-full max-w-6xl mx-auto bg-white bg-cover mt-8 rounded border-gray-500 md:text-center text-2xl';
@@ -182,7 +189,7 @@ function showVideo(video) {
     videoElement.controls = true;
     videoElement.muted = true;
     videoElement.autoplay = true;
-    videoElement.src = `${url}VideoStream/GetStream/${encodeURIComponent(video)}`; // Codificar la ruta completa
+    videoElement.src = `${url}api/Video/stream/${encodeURIComponent(video[0].path)}`; // Codificar la ruta completa
 
     pageContainer.appendChild(h1Element);
     pageContainer.appendChild(videoElement);
