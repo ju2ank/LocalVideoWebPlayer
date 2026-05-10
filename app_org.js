@@ -1,4 +1,4 @@
-const url = 'https://192.168.1.7:446/'
+const url = 'https://192.168.1.2:446/'
 const itemsPerPage = 12;
 let lastPageLoaded = 0;
 let datagrl = null;

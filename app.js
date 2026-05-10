@@ -1,249 +1,360 @@
-const url = 'http://192.168.1.7:450/';
-/* const url2 = 'http://localhost:8081/'; */
-const itemsPerPage = 15; // Cambiado a 30 elementos por página
+const url = 'http://192.168.1.2:450/';
+const itemsPerPage = 24; 
 let currentPage = 0;
-let datagrl = JSON.parse(sessionStorage.getItem('datagrl')) || null; // Cargar datos de sessionStorage si están disponibles
-let filtro = false;
-let newdata = null;
-let randomVideoData = null; // Variable para almacenar el video aleatorio
+let datagrl = null; 
+let filteredData = null;
+let currentPlayingItem = null;
 
-// Inicializa el evento DOMContentLoaded para cargar los datos
+// Referencias del DOM
+const els = {
+    container: document.getElementById('videos-container'),
+    stats: document.getElementById('stats'),
+    
+    // Paginación dual
+    prevBtns: document.querySelectorAll('.prevPage'),
+    nextBtns: document.querySelectorAll('.nextPage'),
+    pageIndicators: document.querySelectorAll('.pageIndicator'),
+    paginationControls: document.querySelectorAll('.pagination-controls'),
+    
+    searchInput: document.getElementById('searchInput'),
+    searchInputMobile: document.getElementById('searchInputMobile'),
+    btnReload: document.getElementById('btnReload'),
+    btnRandom: document.getElementById('btnRandom'),
+    loadingState: document.getElementById('loadingState'),
+    emptyState: document.getElementById('emptyState'),
+    
+    // Reproductor principal
+    playerContainer: document.getElementById('player-container'),
+    mainPlayer: document.getElementById('mainPlayer'),
+    nowPlayingTitle: document.getElementById('nowPlayingTitle'),
+    nowPlayingPath: document.getElementById('nowPlayingPath'),
+    btnClosePlayer: document.getElementById('btnClosePlayer'),
+    speedSelector: document.getElementById('speedSelector'),
+    btnPip: document.getElementById('btnPip'),
+
+    // Historial
+    historySection: document.getElementById('history-section'),
+    historyContainer: document.getElementById('history-container')
+};
+
 document.addEventListener('DOMContentLoaded', () => {
-    if (!datagrl) {
-        cargarData(); // Hacer fetch si no hay datos en sessionStorage
-    } else {
-        loadPage(0, datagrl); // Si hay datos en sessionStorage, cargarlos directamente
-    }
-    document.getElementById('reloadButton').addEventListener('click', () => {
-        sessionStorage.removeItem('datagrl'); // Limpiar sessionStorage para forzar un nuevo fetch
-        cargarData(); // Llamar a la función para hacer el fetch y recargar los datos
-    });
+    initApp();
 });
 
-// Función para cargar datos desde la API
-async function cargarData() {
+async function initApp() {
+    setupEventListeners();
+    renderHistory();
+    
+    const cachedData = sessionStorage.getItem('datagrl');
+    if (cachedData) {
+        try {
+            datagrl = JSON.parse(cachedData);
+            filteredData = [...datagrl];
+            loadPage(0);
+        } catch (e) {
+            console.error("Error al parsear el caché", e);
+            await fetchVideos();
+        }
+    } else {
+        await fetchVideos();
+    }
+}
+
+function setupEventListeners() {
+    els.btnReload.addEventListener('click', async () => {
+        const icon = els.btnReload.querySelector('i');
+        icon.classList.add('fa-spin');
+        await fetchVideos();
+        icon.classList.remove('fa-spin');
+    });
+
+    els.btnRandom.addEventListener('click', playRandomVideo);
+
+    els.prevBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (currentPage > 0) {
+                loadPage(currentPage - 1);
+                // Subir vista
+                window.scrollTo({ top: document.getElementById('videos-container').offsetTop - 150, behavior: 'smooth' });
+            }
+        });
+    });
+
+    els.nextBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            if (currentPage < totalPages - 1) {
+                loadPage(currentPage + 1);
+                // Subir vista
+                window.scrollTo({ top: document.getElementById('videos-container').offsetTop - 150, behavior: 'smooth' });
+            }
+        });
+    });
+
+    const handleSearch = (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        if(e.target === els.searchInput) els.searchInputMobile.value = query;
+        else els.searchInput.value = query;
+        filterVideos(query);
+    };
+
+    els.searchInput.addEventListener('input', handleSearch);
+    els.searchInputMobile.addEventListener('input', handleSearch);
+
+    els.btnClosePlayer.addEventListener('click', closePlayer);
+
+    // Controles Extendidos
+    els.speedSelector.addEventListener('change', (e) => {
+        els.mainPlayer.playbackRate = parseFloat(e.target.value);
+    });
+
+    els.btnPip.addEventListener('click', async () => {
+        if (document.pictureInPictureElement) {
+            await document.exitPictureInPicture();
+        } else if (document.pictureInPictureEnabled && !els.mainPlayer.disablePictureInPicture) {
+            try {
+                await els.mainPlayer.requestPictureInPicture();
+            } catch (err) {
+                console.error("PiP error:", err);
+            }
+        }
+    });
+
+    // Continuar Viendo: Guardar tiempo
+    els.mainPlayer.addEventListener('timeupdate', () => {
+        if (!currentPlayingItem) return;
+        // Solo guarda si avanzó más de 5 segundos
+        if (els.mainPlayer.currentTime > 5) { 
+            const key = `vid_time_${currentPlayingItem.path}`;
+            localStorage.setItem(key, els.mainPlayer.currentTime);
+        }
+    });
+}
+
+async function fetchVideos() {
+    showLoading(true);
     try {
         const response = await fetch(`${url}api/Video/list`);
+        if (!response.ok) throw new Error('Error al obtener API');
         datagrl = await response.json();
-        sessionStorage.setItem('datagrl', JSON.stringify(datagrl)); // Guardar datos en sessionStorage
-        loadPage(0, datagrl);
+        
+        datagrl.sort(() => Math.random() - 0.5);
+        
+        sessionStorage.setItem('datagrl', JSON.stringify(datagrl));
+        filteredData = [...datagrl];
+        els.searchInput.value = '';
+        els.searchInputMobile.value = '';
+        loadPage(0);
     } catch (error) {
-        console.error('Error al cargar datos:', error);
+        console.error('Error fetching videos:', error);
+        els.stats.innerHTML = `<span class="text-red-500">Error al cargar datos</span>`;
+        showEmpty(true);
+    } finally {
+        showLoading(false);
     }
 }
 
-// Función para cargar la página especificada
-function loadPage(pageNumber, data) {
+function filterVideos(query) {
+    if (!datagrl) return;
+    
+    if (!query) {
+        filteredData = [...datagrl];
+    } else {
+        filteredData = datagrl.filter(item => 
+            item.name.toLowerCase().includes(query) || 
+            item.path.toLowerCase().includes(query)
+        );
+    }
+    
+    loadPage(0);
+}
+
+function loadPage(pageNumber) {
+    if (!filteredData) return;
+    
     currentPage = pageNumber;
     const startIndex = pageNumber * itemsPerPage;
-    const endIndex = Math.min(startIndex + itemsPerPage, data.length);
-    const pageContainer = document.querySelector('#videos-container');
-    pageContainer.innerHTML = '';
-
-    // Crear las tarjetas de video para la página actual
-    for (let i = startIndex; i < endIndex; i++) {
-        const item = data[i];
-        let videoPath = item.path.slice(item.path.lastIndexOf('|') + 1);
-        videoPath = videoPath.replace('.mp4', ''); // Quitar la extensión .mp4
-
-        const card = createVideoCard(item, videoPath);
-        pageContainer.appendChild(card);
-    }
-
-    // Actualizar la información de paginación
-    updatePaginationInfo(pageNumber, data.length);
-}
-// Funciones para manejo de botones de navegación, búsqueda de datos, etc.
-
-// Función para crear una tarjeta de video
-function createVideoCard(item, videoPath) {
-    const div1Element = document.createElement('div');
-    div1Element.className = 'w-full md:w-1/3 lg:w-1/3 px-2 mb-3';
-
-    const div2Element = document.createElement('div');
-    div2Element.className = 'border rounded-lg overflow-hidden shadow-md';
-
-    const colorBackground = document.createElement('div');
-    colorBackground.className = 'rounded-border p-2 bg-white';
-
-    const div3Element = document.createElement('div');
-    div3Element.className = 'relative';
-
-    const div4Element = document.createElement('div');
-    div4Element.className = 'py-4 px-6';
-
-    const div5Element = document.createElement('div');
-    div5Element.className = 'video-title bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded transition duration-300';
-
-    /* const encodedVideoPath = encodeURIComponent(item.path.slice(item.path.lastIndexOf('|') + 1).replace('.mp4', '')); // Cambiado para codificar el videoPath
-     */
-    const encodedVideoPath = encodeURIComponent(item.name).replace('.mp4', ''); // Cambiado para codificar el videoPath
+    const endIndex = Math.min(startIndex + itemsPerPage, filteredData.length);
     
-    const videoElement = document.createElement('video');
-    videoElement.autoplay = false;
-    videoElement.muted = true;
-    videoElement.src = `${url}api/Video/stream/${encodeURIComponent(item.path)}`; // Cambiado para codificar la ruta completa
-    videoElement.className = 'w-full h-auto';
-    videoElement.id = encodedVideoPath;
+    els.container.innerHTML = '';
 
-    // Añadir evento para maximizar el video al hacer clic
-    videoElement.addEventListener('click', () => videoElement.requestFullscreen());
-
-    const videoControls = document.createElement('div');
-    videoControls.className = 'video-controls';
-    videoControls.style.display = 'block'; // Mostrar controles por defecto
-    videoControls.innerHTML = `
-        <button onclick="togglePlayPause('${encodedVideoPath}')">Play/Pause</button>
-        <input type="range" min="0" max="100" value="0" onchange="seekVideo(event, '${encodedVideoPath}')">
-    `;
-
-    // Mostrar u ocultar controles al hacer clic en el nombre (si deseas mantener esta funcionalidad)
-    div5Element.innerHTML = decodeURIComponent(encodedVideoPath); // Decodificar para mostrar el nombre legible
-
-    div4Element.appendChild(videoElement);
-    div4Element.appendChild(div5Element);
-    div4Element.appendChild(videoControls);
-    div3Element.appendChild(div4Element);
-    colorBackground.appendChild(div3Element);
-    div2Element.appendChild(colorBackground);
-    div1Element.appendChild(div2Element);
-
-    return div1Element;
-}
-
-
-
-// Función para reproducir o pausar el video
-function togglePlayPause(videoId) {
-    const videoElement = document.getElementById(videoId);
-    if (videoElement.paused) {
-        videoElement.play();
-    } else {
-        videoElement.pause();
-    }
-}
-
-// Función para cambiar la posición de reproducción del video
-function seekVideo(event, videoId) {
-    const videoElement = document.getElementById(videoId);
-    const percent = event.target.value;
-    const newTime = (percent / 100) * videoElement.duration;
-    videoElement.currentTime = newTime;
-}
-
-
-// Función para buscar un video específico en la lista de datos cargados
-function buscarDatos() {
-    if (!datagrl) {
-        console.error('Datos no cargados.');
+    if (filteredData.length === 0) {
+        showEmpty(true);
+        togglePagination(false);
+        els.stats.textContent = "0 resultados";
         return;
     }
 
-    const filename = document.getElementById('filename-input').value.toLowerCase();
-    newdata = datagrl.filter(item => item.path.toLowerCase().includes(filename));
+    showEmpty(false);
+    togglePagination(true);
+
+    for (let i = startIndex; i < endIndex; i++) {
+        const item = filteredData[i];
+        els.container.appendChild(createVideoCard(item));
+    }
+
+    updatePagination();
+}
+
+function createVideoCard(item) {
+    const cleanName = item.name.replace(/\.mp4$/i, '');
+    const streamUrl = `${url}api/Video/stream/${encodeURIComponent(item.path)}#t=5`; 
     
-    // Ordenar los datos por nombre de video
-    newdata.sort((a, b) => {
-        const nameA = a.path.slice(a.path.lastIndexOf('|') + 1).toLowerCase();
-        const nameB = b.path.slice(b.path.lastIndexOf('|') + 1).toLowerCase();
-        if (nameA < nameB) return -1;
-        if (nameA > nameB) return 1;
-        return 0;
+    const div = document.createElement('div');
+    div.className = 'card-glass rounded-xl overflow-hidden group cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 flex flex-col h-full relative';
+    div.onclick = () => playVideo(item);
+    
+    let progressHtml = '';
+    const savedTime = localStorage.getItem(`vid_time_${item.path}`);
+    if (savedTime) {
+        // Asume progreso base si hay tiempo guardado (difícil calcular % sin duracion total pre-cargada)
+        progressHtml = `<div class="absolute bottom-0 left-0 h-1 bg-purple-500 z-20 w-1/2 rounded-r-full shadow-[0_0_8px_rgba(168,85,247,0.8)]" title="Continuar viendo"></div>`;
+    }
+
+    div.innerHTML = `
+        <div class="aspect-video bg-slate-900 relative flex items-center justify-center overflow-hidden">
+            <video src="${streamUrl}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-300" preload="metadata" muted playsinline></video>
+            <i class="fa-solid fa-play absolute text-4xl text-white/50 group-hover:text-purple-500 group-hover:scale-110 transition-all duration-300 z-10 drop-shadow-lg pointer-events-none"></i>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            ${progressHtml}
+        </div>
+        <div class="p-4 flex-grow">
+            <h3 class="text-slate-200 font-medium text-sm line-clamp-2 group-hover:text-purple-400 transition-colors" title="${cleanName}">${cleanName}</h3>
+        </div>
+    `;
+    
+    return div;
+}
+
+function createHistoryCard(item) {
+    const cleanName = item.name.replace(/\.mp4$/i, '');
+    const streamUrl = `${url}api/Video/stream/${encodeURIComponent(item.path)}#t=5`; 
+    
+    const div = document.createElement('div');
+    div.className = 'flex-shrink-0 w-48 card-glass rounded-lg overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all duration-300 relative';
+    div.onclick = () => playVideo(item);
+    
+    div.innerHTML = `
+        <div class="aspect-video bg-slate-900 relative flex items-center justify-center overflow-hidden">
+            <video src="${streamUrl}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-300" preload="metadata" muted playsinline></video>
+            <i class="fa-solid fa-play absolute text-2xl text-white/50 group-hover:text-purple-500 transition-all duration-300 z-10 pointer-events-none"></i>
+        </div>
+        <div class="p-2">
+            <h3 class="text-slate-300 font-medium text-xs line-clamp-1 group-hover:text-purple-400" title="${cleanName}">${cleanName}</h3>
+        </div>
+    `;
+    return div;
+}
+
+function addToHistory(item) {
+    let history = JSON.parse(localStorage.getItem('watch_history')) || [];
+    history = history.filter(h => h.path !== item.path);
+    history.unshift({ name: item.name, path: item.path });
+    if (history.length > 10) history.pop();
+    
+    localStorage.setItem('watch_history', JSON.stringify(history));
+    renderHistory();
+}
+
+function renderHistory() {
+    const history = JSON.parse(localStorage.getItem('watch_history')) || [];
+    if (history.length === 0) {
+        els.historySection.classList.add('hidden');
+        return;
+    }
+    
+    els.historySection.classList.remove('hidden');
+    els.historyContainer.innerHTML = '';
+    
+    history.forEach(item => {
+        els.historyContainer.appendChild(createHistoryCard(item));
     });
-
-    filtro = true;
-    loadPage(0, newdata);
 }
 
-
-// Función para obtener un video aleatorio de la API
-async function getVideo() {
-    try {
-        /* const response = await fetch(`${url}VideoInfo/GetRandomVideo`);
-        randomVideoData = await response.text(); // Guardar el video aleatorio en una variable separada */
-        const randomIndex = Math.floor(Math.random() * datagrl.length);
-        const randomVideoData = [datagrl[randomIndex]];
-        showVideo(randomVideoData);
-    } catch (error) {
-        console.error('Error al obtener video:', error);
-    }
-}
-
-
-// Función para mostrar el video aleatorio obtenido
-function showVideo(video) {
-    const pageContainer = document.querySelector('#videos-container');
-    pageContainer.innerHTML = '';
-    /* console.log(video); */
-    /* let videoPath = encodeURIComponent(video[0].path).replace('.mp4', ''); // Codificar el videoPath */
-    /*  console.log(videoPath);*/
+function playVideo(item) {
+    currentPlayingItem = item;
+    addToHistory(item); 
     
-    const h1Element = document.createElement('h1');
-    h1Element.className = 'container w-full max-w-6xl mx-auto bg-brand font-bold text-yellow-600 md:text-center text-2xl';
-    h1Element.id = 'videoPath';
-    h1Element.innerHTML = decodeURIComponent(video[0].name); // Decodificar para mostrar el nombre legible
+    const cleanName = item.name.replace(/\.mp4$/i, '');
+    const streamUrl = `${url}api/Video/stream/${encodeURIComponent(item.path)}`;
+    
+    els.playerContainer.classList.remove('hidden');
+    els.nowPlayingTitle.textContent = cleanName;
+    els.nowPlayingPath.textContent = item.path;
+    
+    els.mainPlayer.src = streamUrl;
+    
+    // Continuar viendo
+    const savedTime = localStorage.getItem(`vid_time_${item.path}`);
+    if (savedTime) {
+        els.mainPlayer.currentTime = parseFloat(savedTime);
+    }
 
-    const videoElement = document.createElement('video');
-    videoElement.className = 'container w-full max-w-6xl mx-auto bg-white bg-cover mt-8 rounded border-gray-500 md:text-center text-2xl';
-    videoElement.id = 'video';
-    videoElement.controls = true;
-    videoElement.muted = true;
-    videoElement.autoplay = true;
-    videoElement.src = `${url}api/Video/stream/${encodeURIComponent(video[0].path)}`; // Codificar la ruta completa
-
-    pageContainer.appendChild(h1Element);
-    pageContainer.appendChild(videoElement);
+    els.mainPlayer.playbackRate = parseFloat(els.speedSelector.value);
+    
+    els.mainPlayer.play().catch(e => console.log("Autoplay bloqueado", e));
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Función para actualizar la información de paginación
-function updatePaginationInfo(pageNumber, totalItems) {
-    const stats = document.getElementById('stats');
+function closePlayer() {
+    els.mainPlayer.pause();
+    els.mainPlayer.removeAttribute('src'); 
+    els.mainPlayer.load();
+    els.playerContainer.classList.add('hidden');
+    currentPlayingItem = null;
+}
+
+function playRandomVideo() {
+    if (!datagrl || datagrl.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * datagrl.length);
+    playVideo(datagrl[randomIndex]);
+}
+
+function togglePagination(show) {
+    els.paginationControls.forEach(el => {
+        if (show) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+    });
+}
+
+function updatePagination() {
+    const totalItems = filteredData.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
-    stats.innerHTML = `Resultados: ${totalItems} | Página: ${pageNumber + 1} de ${totalPages}`;
-
-    togglePaginationButtons(pageNumber, totalItems);
-}
-
-// Función para habilitar o deshabilitar botones de paginación
-function togglePaginationButtons(pageNumber, totalItems) {
-    const prevButton = document.getElementById('prevPage');
-    const nextButton = document.getElementById('nextPage');
     
-    prevButton.disabled = pageNumber === 0;
-    nextButton.disabled = (pageNumber + 1) * itemsPerPage >= totalItems;
-}
-
-// Función para ir a la página anterior
-function previousPage() {
-    if (currentPage > 0) {
-        const data = filtro ? newdata : datagrl;
-        loadPage(currentPage - 1, data);
-        window.scrollTo(0, 0); // Volver al principio de la página
-    }
-}
-
-// Función para ir a la siguiente página
-function nextPage() {
-    const data = filtro ? newdata : datagrl;
-    if ((currentPage + 1) * itemsPerPage < data.length) {
-        loadPage(currentPage + 1, data);
-        window.scrollTo(0, 0); // Volver al principio de la página
-    }
-}
-
-// Función para ir a una página específica
-function gotoPage() {
-    const pageInput = document.getElementById('gotoPage').value;
-    const pageNumber = parseInt(pageInput) - 1;
-
-    const data = filtro ? newdata : datagrl;
-    const totalPages = Math.ceil(data.length / itemsPerPage);
+    els.stats.textContent = `${totalItems} video${totalItems !== 1 ? 's' : ''}`;
     
-    if (pageNumber >= 0 && pageNumber < totalPages) {
-        loadPage(pageNumber, data);
-        window.scrollTo(0, 0); // Volver al principio de la página
+    if (totalPages <= 1) {
+        togglePagination(false);
     } else {
-        console.error('Número de página inválido.');
+        togglePagination(true);
+        els.pageIndicators.forEach(indicator => {
+            indicator.textContent = `Página ${currentPage + 1} de ${totalPages}`;
+        });
+        
+        els.prevBtns.forEach(btn => { btn.disabled = currentPage === 0; });
+        els.nextBtns.forEach(btn => { btn.disabled = currentPage >= totalPages - 1; });
     }
 }
 
+function showLoading(show) {
+    if (show) {
+        els.loadingState.classList.remove('hidden');
+        els.container.classList.add('hidden');
+        els.emptyState.classList.add('hidden');
+        togglePagination(false);
+    } else {
+        els.loadingState.classList.add('hidden');
+        els.container.classList.remove('hidden');
+    }
+}
+
+function showEmpty(show) {
+    if (show) {
+        els.emptyState.classList.remove('hidden');
+        els.container.classList.add('hidden');
+    } else {
+        els.emptyState.classList.add('hidden');
+        els.container.classList.remove('hidden');
+    }
+}

@@ -1,98 +1,161 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-
-    <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
-
-    <script>
-
-        const url = 'https://localhost:447/'
-
-        function speed(value){
-
-            document.getElementById('videol').playbackRate = value;
-        }
-        function RestarSpeed(){
-
-            document.getElementById('points').value = 1.0;
-            speed(1)
-        }
-   
-        async function GetVideo(){
-   
-        document.getElementById("video").innerHTML ='';
-        await fetch(`${url}VideoInfo/GetRandomVideo`)
-                    .then(response => response.text())
-                    .then((response) => {
-                        showVideo(response)
-                        // CrearTMB()
-                    })
-                    .catch(err => console.log(err))
-  
-        }
-
-
-function showVideo(video){
-
-    /*Path*/
-    document.getElementById("videoPath").innerHTML = ``
-    document.getElementById("videoPath").innerHTML = video.slice(video.lastIndexOf('|')+1,(video.length))
-
-    /*Video*/
-    document.getElementById("video").innerHTML = ``
-    document.getElementById("video").innerHTML = 
-         `<video id="video" controls muted autoplay src="${url}VideoStream/GetStream/${video}"></video>`
-        // `<video id="videol" controls muted src="${url}VideoStream/GetStream/${video}"></video>`
-    
-    
-       
-    }
-
-    // function CrearTMB(){
-    //     const videotm = document.getElementById('video');
-    //      const canvas = document.getElementById('canvas');
-    //      const context = canvas.getContext('2d');
-
-    //     videotm.addEventListener('loadedmetadata', () => {
-    //     // // Configura el canvas para que tenga el mismo tamaño que el video
-    //      canvas.width = videotm.videoWidth;
-    //      canvas.height = videotm.videoHeight;
-    //      });
-
-    //     videotm.addEventListener('play', () => {
-    //      const captureInterval = setInterval(() => {
-    //     //     // Dibuja el cuadro actual del video en el canvas
-    //          context.drawImage(videotm, 0, 0, canvas.width, canvas.height);
-
-    //     //     // Usa la imagen resultante como miniatura del video
-    //          const thumbnail = canvas.toDataURL();
-    //          console.log('Miniatura generada:', thumbnail);
-    //      }, 1000 / 30); // Captura un cuadro cada 30fps
-    //      })
-
-
-    // }
-
-
-
-
-    </script>
+    <title>LocalVideo Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .card-glass { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        #player-container.hidden { display: none; }
+    </style>
 </head>
-<body class="bg-white font-sans leading-normal tracking-normal">
-    <h1 class="container w-full max-w-6xl mx-auto bg-brand font-bold text-purple-600  md:text-center text-2xl" id="videoPath"></h1>
-    <div class="container w-full max-w-6xl mx-auto bg-white bg-cover mt-8 rounded border-gray-500 md:text-center text-2xl" style="" id="video">
-    </div>
-    <canvas id="canvas"></canvas>
+<body class="font-sans antialiased min-h-screen flex flex-col">
 
-    <div class="container w-full max-w-6xl mx-auto mt-8 rounded border-gray-500 md:text-center text-2xl bg-lime-200">
-    <button  class="px-4 py-1 text-sm text-purple-600 font-semibold rounded-full border border-purple-200 hover:text-white hover:bg-purple-600 hover:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 md:text-center" onclick="GetVideo()">CargarVideo</button>
-    <button  class="px-4 py-1 text-sm text-purple-600 font-semibold rounded-full border border-purple-200 hover:text-white hover:bg-purple-600 hover:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 md:text-center" onclick="RestarSpeed()">RestartSpeed</button>
-    <input type="range" id="points" value="1" name="points" min="0" max="10" onchange="speed(this.value)" >
-    </div>
+    <!-- Navbar -->
+    <nav class="glass fixed w-full z-50 top-0 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" onclick="window.scrollTo(0,0)">
+                    <i class="fa-solid fa-play text-purple-500 text-2xl"></i>
+                    <span class="font-bold text-xl tracking-wider text-white">Local<span class="text-purple-500">Video</span></span>
+                </div>
+                
+                <!-- Search -->
+                <div class="flex-1 max-w-md mx-4 hidden sm:block">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-search text-gray-400"></i>
+                        </div>
+                        <input type="text" id="searchInput" class="block w-full pl-10 pr-3 py-2 border border-slate-700 rounded-full leading-5 bg-slate-800 text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm transition-all" placeholder="Buscar videos...">
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-3">
+                    <button id="btnRandom" class="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-sm font-medium rounded-full shadow-lg shadow-purple-500/30 transition-all transform hover:scale-105">
+                        <i class="fa-solid fa-dice"></i> Aleatorio
+                    </button>
+                    <button id="btnReload" class="p-2 rounded-full hover:bg-slate-700 text-gray-300 transition-colors" title="Recargar Biblioteca">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Search -->
+        <div class="sm:hidden px-4 pb-3">
+            <input type="text" id="searchInputMobile" class="block w-full px-4 py-2 border border-slate-700 rounded-full leading-5 bg-slate-800 text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm" placeholder="Buscar videos...">
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-20 pb-12 w-full">
+        
+        <!-- Player Container -->
+        <div id="player-container" class="hidden mb-8 w-full max-w-4xl mx-auto bg-black rounded-2xl overflow-hidden shadow-2xl shadow-purple-900/20 border border-slate-800 relative group">
+            <button id="btnClosePlayer" class="absolute top-4 right-4 z-10 bg-black/50 hover:bg-red-500/80 text-white rounded-full w-8 h-8 flex items-center justify-center backdrop-blur-md transition-colors opacity-0 group-hover:opacity-100">
+                <i class="fa-solid fa-times"></i>
+            </button>
+            <div class="aspect-video w-full bg-slate-900 relative">
+                <video id="mainPlayer" class="w-full h-full outline-none" controls autoplay></video>
+            </div>
+            <!-- Player Info & Controls -->
+            <div class="p-4 bg-slate-900 border-t border-slate-800">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div class="flex-1 min-w-0">
+                        <h2 id="nowPlayingTitle" class="text-xl font-bold text-white truncate"></h2>
+                        <div class="mt-1 text-sm text-gray-400">
+                            <span id="nowPlayingPath" class="truncate opacity-70 block"></span>
+                        </div>
+                    </div>
+                    <!-- New controls: PiP & Speed -->
+                    <div class="flex items-center gap-3 shrink-0">
+                        <select id="speedSelector" class="bg-slate-800 border border-slate-700 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2 cursor-pointer outline-none">
+                            <option value="0.5">0.5x</option>
+                            <option value="1" selected>1x</option>
+                            <option value="1.25">1.25x</option>
+                            <option value="1.5">1.5x</option>
+                            <option value="2">2x</option>
+                        </select>
+                        <button id="btnPip" class="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-white transition-colors" title="Picture in Picture">
+                            <i class="fa-solid fa-clone"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Section (Hidden if empty) -->
+        <div id="history-section" class="mb-10 hidden">
+            <h2 class="text-lg font-bold text-slate-300 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-purple-500"></i> Vistos Recientemente
+            </h2>
+            <div class="flex overflow-x-auto gap-4 pb-4 hide-scrollbar" id="history-container">
+                <!-- History cards injected here -->
+            </div>
+        </div>
+
+        <!-- Title & Stats -->
+        <div class="flex justify-between items-end mb-4">
+            <h1 class="text-2xl font-bold text-white">Tu Biblioteca</h1>
+            <span id="stats" class="text-sm text-slate-400 font-medium">Cargando...</span>
+        </div>
+
+        <!-- Top Pagination -->
+        <div class="pagination-controls flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 hidden">
+            <span class="pageIndicator text-slate-400 font-medium text-sm">Página 1</span>
+            <div class="flex gap-2">
+                <button class="prevPage px-4 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+                    <i class="fa-solid fa-chevron-left mr-1"></i> Anterior
+                </button>
+                <button class="nextPage px-4 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+                    Siguiente <i class="fa-solid fa-chevron-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Video Grid -->
+        <div id="videos-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Cards will be injected here -->
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="py-20 flex flex-col items-center justify-center text-slate-500 hidden">
+            <i class="fa-solid fa-spinner fa-spin text-4xl mb-4 text-purple-500"></i>
+            <p>Cargando videos...</p>
+        </div>
+        
+        <!-- Empty State -->
+        <div id="emptyState" class="py-20 flex flex-col items-center justify-center text-slate-500 hidden">
+            <i class="fa-regular fa-folder-open text-6xl mb-4 opacity-50"></i>
+            <p class="text-lg">No se encontraron videos.</p>
+        </div>
+
+        <!-- Bottom Pagination -->
+        <div class="pagination-controls flex flex-col sm:flex-row justify-between items-center mt-10 gap-4 hidden">
+            <span class="pageIndicator text-slate-400 font-medium text-sm">Página 1</span>
+            <div class="flex gap-2">
+                <button class="prevPage px-4 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+                    <i class="fa-solid fa-chevron-left mr-1"></i> Anterior
+                </button>
+                <button class="nextPage px-4 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+                    Siguiente <i class="fa-solid fa-chevron-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 py-6 text-center text-slate-500 text-sm mt-auto">
+        <p>LocalVideo Player &copy; 2026</p>
+    </footer>
+
+    <script src="app.js"></script>
 </body>
 </html>
-
