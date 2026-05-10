@@ -12,6 +12,10 @@
         .card-glass { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.05); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background-color: #475569; border-radius: 10px; }
+        .custom-scroll { scrollbar-width: thin; scrollbar-color: #475569 transparent; }
         #player-container.hidden { display: none; }
     </style>
 </head>
@@ -98,6 +102,19 @@
             </h2>
             <div class="flex overflow-x-auto gap-4 pb-4 hide-scrollbar" id="history-container">
                 <!-- History cards injected here -->
+            </div>
+        </div>
+
+        <!-- Favorites Section (Hidden if empty) -->
+        <div id="favorites-section" class="mb-10 hidden bg-slate-800/30 p-4 sm:p-6 rounded-2xl border border-slate-700/50">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-slate-200 flex items-center gap-2">
+                    <i class="fa-solid fa-heart text-red-500"></i> Tus Favoritos
+                </h2>
+                <span id="favorites-count" class="text-xs font-semibold bg-red-500/10 text-red-400 px-3 py-1 rounded-full border border-red-500/20"></span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 max-h-[50vh] overflow-y-auto custom-scroll pr-2" id="favorites-container">
+                <!-- Favorites cards injected here -->
             </div>
         </div>
 

@@ -34,7 +34,12 @@ const els = {
 
     // Historial
     historySection: document.getElementById('history-section'),
-    historyContainer: document.getElementById('history-container')
+    historyContainer: document.getElementById('history-container'),
+
+    // Favoritos
+    favoritesSection: document.getElementById('favorites-section'),
+    favoritesContainer: document.getElementById('favorites-container'),
+    favoritesCount: document.getElementById('favorites-count')
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -44,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initApp() {
     setupEventListeners();
     renderHistory();
+    renderFavorites();
     
     const cachedData = sessionStorage.getItem('datagrl');
     if (cachedData) {
@@ -211,17 +217,28 @@ function createVideoCard(item) {
         progressHtml = `<div class="absolute bottom-0 left-0 h-1 bg-purple-500 z-20 w-1/2 rounded-r-full shadow-[0_0_8px_rgba(168,85,247,0.8)]" title="Continuar viendo"></div>`;
     }
 
+    const favIconClass = isFavorite(item.path) ? 'fa-solid text-red-500' : 'fa-regular text-white/70 hover:text-red-500';
+
     div.innerHTML = `
         <div class="aspect-video bg-slate-900 relative flex items-center justify-center overflow-hidden">
             <video src="${streamUrl}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-300" preload="metadata" muted playsinline></video>
             <i class="fa-solid fa-play absolute text-4xl text-white/50 group-hover:text-purple-500 group-hover:scale-110 transition-all duration-300 z-10 drop-shadow-lg pointer-events-none"></i>
-            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <button class="fav-btn absolute top-2 right-2 z-20 p-2 rounded-full bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/60 focus:outline-none">
+                <i class="fa-heart text-lg transition-colors ${favIconClass}" data-fav-path="${encodeURIComponent(item.path)}"></i>
+            </button>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
             ${progressHtml}
         </div>
         <div class="p-4 flex-grow">
             <h3 class="text-slate-200 font-medium text-sm line-clamp-2 group-hover:text-purple-400 transition-colors" title="${cleanName}">${cleanName}</h3>
         </div>
     `;
+    
+    const favBtn = div.querySelector('.fav-btn');
+    favBtn.onclick = (e) => {
+        e.stopPropagation();
+        toggleFavorite(item);
+    };
     
     return div;
 }
@@ -269,6 +286,87 @@ function renderHistory() {
     history.forEach(item => {
         els.historyContainer.appendChild(createHistoryCard(item));
     });
+}
+
+function isFavorite(path) {
+    const favorites = JSON.parse(localStorage.getItem('favorites_list')) || [];
+    return favorites.some(f => f.path === path);
+}
+
+function toggleFavorite(item) {
+    let favorites = JSON.parse(localStorage.getItem('favorites_list')) || [];
+    const index = favorites.findIndex(f => f.path === item.path);
+    
+    if (index > -1) {
+        // Remove from favorites
+        favorites.splice(index, 1);
+    } else {
+        // Add to favorites
+        favorites.unshift({ name: item.name, path: item.path });
+    }
+    
+    localStorage.setItem('favorites_list', JSON.stringify(favorites));
+    renderFavorites();
+    
+    // Update all matching favorite icons on the screen
+    const favIcons = document.querySelectorAll(`i[data-fav-path="${encodeURIComponent(item.path)}"]`);
+    favIcons.forEach(icon => {
+        if (index > -1) {
+            // Was removed
+            icon.classList.remove('fa-solid', 'text-red-500');
+            icon.classList.add('fa-regular', 'text-white/70');
+        } else {
+            // Was added
+            icon.classList.remove('fa-regular', 'text-white/70', 'hover:text-red-500');
+            icon.classList.add('fa-solid', 'text-red-500');
+        }
+    });
+}
+
+function renderFavorites() {
+    const favorites = JSON.parse(localStorage.getItem('favorites_list')) || [];
+    if (favorites.length === 0) {
+        els.favoritesSection.classList.add('hidden');
+        return;
+    }
+    
+    els.favoritesSection.classList.remove('hidden');
+    els.favoritesContainer.innerHTML = '';
+    els.favoritesCount.textContent = `${favorites.length} video${favorites.length !== 1 ? 's' : ''}`;
+    
+    favorites.forEach(item => {
+        els.favoritesContainer.appendChild(createFavoriteCard(item));
+    });
+}
+
+function createFavoriteCard(item) {
+    const cleanName = item.name.replace(/\.mp4$/i, '');
+    const streamUrl = `${url}api/Video/stream/${encodeURIComponent(item.path)}#t=5`; 
+    
+    const div = document.createElement('div');
+    div.className = 'w-full h-full card-glass rounded-lg overflow-hidden group cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:shadow-red-500/10 transition-all duration-300 relative flex flex-col';
+    div.onclick = () => playVideo(item);
+    
+    div.innerHTML = `
+        <div class="aspect-video bg-slate-900 relative flex items-center justify-center overflow-hidden">
+            <video src="${streamUrl}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-300" preload="metadata" muted playsinline></video>
+            <i class="fa-solid fa-play absolute text-2xl text-white/50 group-hover:text-purple-500 transition-all duration-300 z-10 pointer-events-none"></i>
+            <button class="fav-btn absolute top-1 right-1 z-20 p-1.5 rounded-full bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all hover:bg-black/70 focus:outline-none">
+                <i class="fa-solid fa-heart text-sm text-red-500" data-fav-path="${encodeURIComponent(item.path)}"></i>
+            </button>
+        </div>
+        <div class="p-2">
+            <h3 class="text-slate-300 font-medium text-xs line-clamp-1 group-hover:text-purple-400" title="${cleanName}">${cleanName}</h3>
+        </div>
+    `;
+    
+    const favBtn = div.querySelector('.fav-btn');
+    favBtn.onclick = (e) => {
+        e.stopPropagation();
+        toggleFavorite(item);
+    };
+    
+    return div;
 }
 
 function playVideo(item) {
