@@ -15,11 +15,13 @@ const els = {
     nextBtns: document.querySelectorAll('.nextPage'),
     pageIndicators: document.querySelectorAll('.pageIndicator'),
     paginationControls: document.querySelectorAll('.pagination-controls'),
+    pageNumbers: document.querySelectorAll('.pageNumbers'),
     
     searchInput: document.getElementById('searchInput'),
     searchInputMobile: document.getElementById('searchInputMobile'),
     btnReload: document.getElementById('btnReload'),
     btnRandom: document.getElementById('btnRandom'),
+    btnRandomFiltered: document.getElementById('btnRandomFiltered'),
     loadingState: document.getElementById('loadingState'),
     emptyState: document.getElementById('emptyState'),
     
@@ -75,6 +77,7 @@ function setupEventListeners() {
     });
 
     els.btnRandom.addEventListener('click', playRandomVideo);
+    els.btnRandomFiltered.addEventListener('click', playRandomFilteredVideo);
 
     els.prevBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -170,6 +173,9 @@ function filterVideos(query) {
             item.name.toLowerCase().includes(query) || 
             item.path.toLowerCase().includes(query)
         );
+        
+        // Ordenar alfabéticamente por nombre
+        filteredData.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
     }
     
     loadPage(0);
@@ -409,6 +415,12 @@ function playRandomVideo() {
     playVideo(datagrl[randomIndex]);
 }
 
+function playRandomFilteredVideo() {
+    if (!filteredData || filteredData.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * filteredData.length);
+    playVideo(filteredData[randomIndex]);
+}
+
 function togglePagination(show) {
     els.paginationControls.forEach(el => {
         if (show) el.classList.remove('hidden');
@@ -430,9 +442,60 @@ function updatePagination() {
             indicator.textContent = `Página ${currentPage + 1} de ${totalPages}`;
         });
         
+        els.pageNumbers.forEach(container => {
+            container.innerHTML = '';
+            
+            let startPage = Math.max(0, currentPage - 2);
+            let endPage = Math.min(totalPages - 1, currentPage + 2);
+            
+            if (endPage - startPage < 4) {
+                if (startPage === 0) endPage = Math.min(totalPages - 1, startPage + 4);
+                else if (endPage === totalPages - 1) startPage = Math.max(0, endPage - 4);
+            }
+            
+            if (startPage > 0) {
+                container.appendChild(createPageBtn(0, false));
+                if (startPage > 1) {
+                    const dots = document.createElement('span');
+                    dots.className = 'text-slate-500 px-1 select-none';
+                    dots.textContent = '...';
+                    container.appendChild(dots);
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                container.appendChild(createPageBtn(i, i === currentPage));
+            }
+            
+            if (endPage < totalPages - 1) {
+                if (endPage < totalPages - 2) {
+                    const dots = document.createElement('span');
+                    dots.className = 'text-slate-500 px-1 select-none';
+                    dots.textContent = '...';
+                    container.appendChild(dots);
+                }
+                container.appendChild(createPageBtn(totalPages - 1, false));
+            }
+        });
+        
         els.prevBtns.forEach(btn => { btn.disabled = currentPage === 0; });
         els.nextBtns.forEach(btn => { btn.disabled = currentPage >= totalPages - 1; });
     }
+}
+
+function createPageBtn(pageIndex, isActive) {
+    const btn = document.createElement('button');
+    btn.textContent = pageIndex + 1;
+    btn.className = `w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium transition-colors ${isActive ? 'bg-purple-600 text-white cursor-default' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
+    if (!isActive) {
+        btn.onclick = () => {
+            loadPage(pageIndex);
+            window.scrollTo({ top: document.getElementById('videos-container').offsetTop - 150, behavior: 'smooth' });
+        };
+    } else {
+        btn.disabled = true;
+    }
+    return btn;
 }
 
 function showLoading(show) {

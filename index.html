@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LocalVideo Player</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -43,8 +44,11 @@
 
                 <!-- Actions -->
                 <div class="flex items-center gap-3">
-                    <button id="btnRandom" class="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-sm font-medium rounded-full shadow-lg shadow-purple-500/30 transition-all transform hover:scale-105">
-                        <i class="fa-solid fa-dice"></i> Aleatorio
+                    <button id="btnRandomFiltered" class="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-medium rounded-full shadow-lg shadow-emerald-500/30 transition-all transform hover:scale-105" title="Aleatorio (de tu búsqueda)">
+                        <i class="fa-solid fa-shuffle"></i> Filtrado
+                    </button>
+                    <button id="btnRandom" class="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-sm font-medium rounded-full shadow-lg shadow-purple-500/30 transition-all transform hover:scale-105" title="Aleatorio (de todo)">
+                        <i class="fa-solid fa-dice"></i> Todo
                     </button>
                     <button id="btnReload" class="p-2 rounded-full hover:bg-slate-700 text-gray-300 transition-colors" title="Recargar Biblioteca">
                         <i class="fa-solid fa-rotate-right"></i>
@@ -127,12 +131,13 @@
         <!-- Top Pagination -->
         <div class="pagination-controls flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 hidden">
             <span class="pageIndicator text-slate-400 font-medium text-sm">Página 1</span>
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
                 <button class="prevPage px-4 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
-                    <i class="fa-solid fa-chevron-left mr-1"></i> Anterior
+                    <i class="fa-solid fa-chevron-left sm:mr-1"></i> <span class="hidden sm:inline">Anterior</span>
                 </button>
+                <div class="pageNumbers flex gap-1 items-center hidden sm:flex"></div>
                 <button class="nextPage px-4 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
-                    Siguiente <i class="fa-solid fa-chevron-right ml-1"></i>
+                    <span class="hidden sm:inline">Siguiente</span> <i class="fa-solid fa-chevron-right sm:ml-1"></i>
                 </button>
             </div>
         </div>
@@ -157,12 +162,13 @@
         <!-- Bottom Pagination -->
         <div class="pagination-controls flex flex-col sm:flex-row justify-between items-center mt-10 gap-4 hidden">
             <span class="pageIndicator text-slate-400 font-medium text-sm">Página 1</span>
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
                 <button class="prevPage px-4 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
-                    <i class="fa-solid fa-chevron-left mr-1"></i> Anterior
+                    <i class="fa-solid fa-chevron-left sm:mr-1"></i> <span class="hidden sm:inline">Anterior</span>
                 </button>
+                <div class="pageNumbers flex gap-1 items-center hidden sm:flex"></div>
                 <button class="nextPage px-4 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
-                    Siguiente <i class="fa-solid fa-chevron-right ml-1"></i>
+                    <span class="hidden sm:inline">Siguiente</span> <i class="fa-solid fa-chevron-right sm:ml-1"></i>
                 </button>
             </div>
         </div>
